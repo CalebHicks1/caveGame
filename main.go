@@ -60,9 +60,10 @@ func run() {
 
 	// Declare vars
 	var (
-		playerMat = pixel.IM.Scaled(pixel.ZV, 8).Moved(win.Bounds().Center())
-		last      = time.Now()
-		playerRec = pixel.R(-56, -56, 56, 56).Moved(win.Bounds().Center())
+		last         = time.Now()
+		playerWidth  = 60.0
+		playerHeight = 60.0
+		playerRec    = pixel.R(-playerWidth/2, -playerHeight/2, playerWidth/2, playerHeight/2).Moved(win.Bounds().Center())
 	)
 
 	// create IMDraw object
@@ -75,24 +76,14 @@ func run() {
 	// imd.Line(15)
 
 	rectangle := pixel.R(0, 0, 1024, 40)
-	// imd.Push(rectangle.Min, rectangle.Max)
-	// imd.Rectangle(0)
 
 	// MAIN LOOP ////////////////////////////////////
 	for !win.Closed() {
 		dt := time.Since(last).Seconds()
 		last = time.Now()
-		fmt.Printf("Player position: (%.2f, %.2f)", playerMat.Project(pixel.ZV).X, playerMat.Project(pixel.ZV).Y)
+		fmt.Printf("Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
 
 		// Clear the screen and redraw the sprite
-		imd.Clear()
-		win.Clear(color.Black)
-		imd.Push(playerRec.Min, playerRec.Max)
-		imd.Rectangle(0)
-		imd.Push(rectangle.Min, rectangle.Max)
-		imd.Rectangle(0)
-		imd.Draw(win)
-		playerSprite.Draw(win, playerMat)
 		// Controls
 		switch {
 		case win.Pressed(pixelgl.KeyRight):
@@ -102,20 +93,22 @@ func run() {
 		default:
 			playerAcc.X = 0.0
 		}
+		if win.Pressed(pixelgl.KeyUp) && playerRec.Intersects(rectangle) {
+			playerVel.Y = 20
+		}
 
 		if !playerRec.Intersects(rectangle) {
-			playerAcc.Y = -5.0
-			fmt.Printf(" not touching ground  \r")
-		} else {
+			playerAcc.Y = -1.5
+		} else if playerVel.Y <= 0 {
 			playerAcc.Y = 0.0
-			fmt.Printf(" touching ground      \r")
+			playerVel.Y = 0.0
+			playerRec = playerRec.Moved(pixel.V(0, rectangle.Max.Y-playerRec.Min.Y))
 		}
 
 		// Apply velocity
 		playerVel.X = playerVel.X*(1-dt*transition_speed) + playerAcc.X*(dt*transition_speed)
-		playerVel.Y = 0.5 * playerAcc.Y
+		playerVel.Y += playerAcc.Y
 		playerRec = playerRec.Moved(playerVel)
-		playerMat = playerMat.Moved(playerVel)
 
 		// Draw fps on window title
 		frames++
@@ -125,6 +118,18 @@ func run() {
 			frames = 0
 		default:
 		}
+		imd.Clear()
+		win.Clear(color.Black)
+		imd.Color = pixel.RGB(255, 255, 255)
+		imd.Push(rectangle.Min, rectangle.Max)
+		imd.Rectangle(0)
+		imd.Color = pixel.RGB(255, 0, 0)
+		imd.Push(playerRec.Min, playerRec.Max)
+		imd.Rectangle(1)
+		imd.Draw(win)
+		playerSprite.Draw(win, pixel.IM.ScaledXY(
+			pixel.ZV, pixel.V(playerRec.W()/16, playerRec.H()/16)).Moved(
+			playerRec.Center()))
 
 		win.Update()
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/faiface/pixel"
+	"github.com/faiface/pixel/imdraw"
 	"github.com/faiface/pixel/pixelgl"
 )
 
@@ -22,6 +23,12 @@ var (
 	playerAcc        = pixel.ZV
 	transition_speed = 12.0
 )
+
+// struct to hold line properties
+type line struct {
+	p1 pixel.Vec
+	p2 pixel.Vec
+}
 
 // Main Functions ///////////////////////////////////////////////////
 
@@ -55,16 +62,37 @@ func run() {
 	var (
 		playerMat = pixel.IM.Scaled(pixel.ZV, 8).Moved(win.Bounds().Center())
 		last      = time.Now()
+		playerRec = pixel.R(-56, -56, 56, 56).Moved(win.Bounds().Center())
 	)
 
+	// create IMDraw object
+	imd := imdraw.New(nil)
+
+	// // Create line
+	// groundLine := line{pixel.V(24, 360), pixel.V(1000, 360)}
+	// imd.EndShape = imdraw.RoundEndShape
+	// imd.Push(groundLine.p1, groundLine.p2)
+	// imd.Line(15)
+
+	rectangle := pixel.R(0, 0, 1024, 40)
+	// imd.Push(rectangle.Min, rectangle.Max)
+	// imd.Rectangle(0)
+
+	// MAIN LOOP ////////////////////////////////////
 	for !win.Closed() {
 		dt := time.Since(last).Seconds()
 		last = time.Now()
+		fmt.Printf("Player position: (%.2f, %.2f)", playerMat.Project(pixel.ZV).X, playerMat.Project(pixel.ZV).Y)
 
 		// Clear the screen and redraw the sprite
+		imd.Clear()
 		win.Clear(color.Black)
+		imd.Push(playerRec.Min, playerRec.Max)
+		imd.Rectangle(0)
+		imd.Push(rectangle.Min, rectangle.Max)
+		imd.Rectangle(0)
+		imd.Draw(win)
 		playerSprite.Draw(win, playerMat)
-
 		// Controls
 		switch {
 		case win.Pressed(pixelgl.KeyRight):
@@ -75,8 +103,18 @@ func run() {
 			playerAcc.X = 0.0
 		}
 
+		if !playerRec.Intersects(rectangle) {
+			playerAcc.Y = -5.0
+			fmt.Printf(" not touching ground  \r")
+		} else {
+			playerAcc.Y = 0.0
+			fmt.Printf(" touching ground      \r")
+		}
+
 		// Apply velocity
 		playerVel.X = playerVel.X*(1-dt*transition_speed) + playerAcc.X*(dt*transition_speed)
+		playerVel.Y = 0.5 * playerAcc.Y
+		playerRec = playerRec.Moved(playerVel)
 		playerMat = playerMat.Moved(playerVel)
 
 		// Draw fps on window title
@@ -91,6 +129,7 @@ func run() {
 		win.Update()
 
 	}
+	fmt.Printf("\n")
 }
 
 /*

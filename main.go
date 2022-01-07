@@ -22,6 +22,7 @@ var (
 	playerPos        = pixel.ZV
 	playerVel        = pixel.ZV
 	playerAcc        = pixel.ZV
+	touchingGround   = false
 	transition_speed = 12.0
 )
 
@@ -49,7 +50,7 @@ func run() {
 	// Window configuration
 	cfg := pixelgl.WindowConfig{
 		Title:  "Caleb's Game",
-		Bounds: pixel.R(0, 0, 900, 900),
+		Bounds: pixel.R(0, 0, 900, 700),
 		VSync:  true,
 	}
 
@@ -77,7 +78,13 @@ func run() {
 	// imd.Push(groundLine.p1, groundLine.p2)
 	// imd.Line(15)
 
-	rectangle := pixel.R(-400, -150, 400, -100) // ground rectangle
+	type platform struct {
+		rect pixel.Rect
+	}
+	platforms := []platform{
+		{rect: pixel.R(-400, -150, 400, -100)},
+		{rect: pixel.R(450, -150, 800, -100)},
+	}
 
 	// MAIN LOOP ////////////////////////////////////
 	for !win.Closed() {
@@ -103,17 +110,23 @@ func run() {
 		default:
 			playerAcc.X = 0.0
 		}
-		if win.Pressed(pixelgl.KeyUp) && playerRec.Intersects(rectangle) {
+		if win.Pressed(pixelgl.KeyUp) && touchingGround {
 			playerVel.Y = 15
 		}
 
 		// If touching ground
-		if !playerRec.Intersects(rectangle) {
-			playerAcc.Y = -1.5
-		} else if playerVel.Y <= 0 {
-			playerAcc.Y = 0.0
-			playerVel.Y = 0.0
-			playerRec = playerRec.Moved(pixel.V(0, rectangle.Max.Y-playerRec.Min.Y))
+		for _, p := range platforms {
+			rectangle := p.rect
+			if !playerRec.Intersects(rectangle) {
+				playerAcc.Y = -1.5
+				touchingGround = false
+			} else if playerVel.Y <= 0 {
+				touchingGround = true
+				playerAcc.Y = 0.0
+				playerVel.Y = 0.0
+				playerRec = playerRec.Moved(pixel.V(0, rectangle.Max.Y-playerRec.Min.Y))
+				break
+			}
 		}
 
 		// Apply velocity
@@ -129,15 +142,18 @@ func run() {
 			frames = 0
 		default:
 		}
-		fmt.Printf("Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
+		fmt.Printf("Player position: (%.2f, %.2f), touching ground: %v \r", playerRec.Center().X, playerRec.Center().Y, touchingGround)
 
 		// DRAW SPRITES
 		// Clear the screen and redraw the sprite
 		imd.Clear()
 		win.Clear(color.Black)
 		imd.Color = pixel.RGB(255, 255, 255)
-		imd.Push(rectangle.Min, rectangle.Max)
-		imd.Rectangle(0)
+		for _, p := range platforms {
+			rectangle := p.rect
+			imd.Push(rectangle.Min, rectangle.Max)
+			imd.Rectangle(0)
+		}
 		imd.Color = pixel.RGB(255, 0, 0)
 		imd.Push(playerRec.Min, playerRec.Max)
 		imd.Rectangle(1)

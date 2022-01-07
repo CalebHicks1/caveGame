@@ -26,10 +26,29 @@ var (
 	transition_speed = 12.0
 )
 
-// struct to hold line properties
-type line struct {
-	p1 pixel.Vec
-	p2 pixel.Vec
+// Returns the slope of the line that is intersecting r
+func GetIntersectingLineSlope(l pixel.Line, r pixel.Rect) float64 {
+	points := r.IntersectionPoints(l)
+	if len(points) == 0 {
+		return -1
+	} else {
+		if len(points) == 2 {
+			return math.Abs((points[0].Y - points[1].Y) / (points[0].X - points[1].X))
+		}
+		return 0
+	}
+}
+
+// Returns a vec that moves r up so that it is no longer intersecting l
+func MoveRectangleUp(l pixel.Line, r pixel.Rect) pixel.Vec {
+	testRec := r
+	retVec := pixel.ZV
+	for len(testRec.IntersectionPoints(l)) > 0 {
+		retVec.Y++
+		testRec = testRec.Moved(retVec)
+		fmt.Print(retVec)
+	}
+	return retVec
 }
 
 // Main Functions ///////////////////////////////////////////////////
@@ -62,6 +81,7 @@ func run() {
 
 	// Declare vars
 	var (
+		lineSlope      = 0.0
 		cameraPosition = pixel.ZV
 		last           = time.Now()
 		playerWidth    = 60.0
@@ -79,11 +99,11 @@ func run() {
 	// imd.Line(15)
 
 	type platform struct {
-		rect pixel.Rect
+		line pixel.Line
 	}
 	platforms := []platform{
-		{rect: pixel.R(-400, -150, 400, -100)},
-		{rect: pixel.R(450, -150, 800, -100)},
+		{line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
+		{line: pixel.L(pixel.V(450, -20), pixel.V(600, 20))},
 	}
 
 	// MAIN LOOP ////////////////////////////////////
@@ -116,15 +136,17 @@ func run() {
 
 		// If touching ground
 		for _, p := range platforms {
-			rectangle := p.rect
-			if !playerRec.Intersects(rectangle) {
+			line := p.line
+			lineSlope = GetIntersectingLineSlope(line, playerRec)
+			if playerRec.IntersectLine(line) == pixel.ZV {
 				playerAcc.Y = -1.5
 				touchingGround = false
 			} else if playerVel.Y <= 0 {
 				touchingGround = true
 				playerAcc.Y = 0.0
 				playerVel.Y = 0.0
-				playerRec = playerRec.Moved(pixel.V(0, rectangle.Max.Y-playerRec.Min.Y))
+				//playerRec = playerRec.Moved(pixel.Lerp(playerRec.Center(), MoveRectangleUp(line, playerRec), 1-math.Pow(1.0/128, dt)))
+				playerRec = playerRec.Moved(MoveRectangleUp(line, playerRec))
 				break
 			}
 		}
@@ -142,7 +164,7 @@ func run() {
 			frames = 0
 		default:
 		}
-		fmt.Printf("Player position: (%.2f, %.2f), touching ground: %v \r", playerRec.Center().X, playerRec.Center().Y, touchingGround)
+		fmt.Printf("Player position: (%.2f, %.2f), line slope = %.2f, touching ground: %v \r", playerRec.Center().X, playerRec.Center().Y, lineSlope, touchingGround)
 
 		// DRAW SPRITES
 		// Clear the screen and redraw the sprite
@@ -150,9 +172,10 @@ func run() {
 		win.Clear(color.Black)
 		imd.Color = pixel.RGB(255, 255, 255)
 		for _, p := range platforms {
-			rectangle := p.rect
-			imd.Push(rectangle.Min, rectangle.Max)
-			imd.Rectangle(0)
+			line := p.line
+			imd.EndShape = imdraw.RoundEndShape
+			imd.Push(line.A, line.B)
+			imd.Line(5)
 		}
 		imd.Color = pixel.RGB(255, 0, 0)
 		imd.Push(playerRec.Min, playerRec.Max)

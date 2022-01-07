@@ -49,7 +49,7 @@ func run() {
 	// Window configuration
 	cfg := pixelgl.WindowConfig{
 		Title:  "Caleb's Game",
-		Bounds: pixel.R(0, 0, 1900, 700),
+		Bounds: pixel.R(0, 0, 900, 900),
 		VSync:  true,
 	}
 
@@ -77,19 +77,24 @@ func run() {
 	// imd.Push(groundLine.p1, groundLine.p2)
 	// imd.Line(15)
 
-	rectangle := pixel.R(-800, -100, 800, -80) // ground rectangle
+	rectangle := pixel.R(-400, -150, 400, -100) // ground rectangle
 
 	// MAIN LOOP ////////////////////////////////////
 	for !win.Closed() {
-		dt := time.Since(last).Seconds()
-		cameraPosition = pixel.Lerp(cameraPosition, playerRec.Center(), 1-math.Pow(1.0/128, dt))
-		cam := pixel.IM.Moved(win.Bounds().Center().Sub(cameraPosition))
-		win.SetMatrix(cam)
-		last = time.Now()
-		fmt.Printf("Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
 
-		// Clear the screen and redraw the sprite
-		// Controls
+		// TIME
+		dt := time.Since(last).Seconds()
+		last = time.Now()
+
+		// CAMERA
+		// Make camera follow the player
+		cameraPosition = pixel.Lerp(cameraPosition, playerRec.Center(), 1-math.Pow(1.0/128, dt))
+		// Create camera matrix to translate all sprites by
+		cam := pixel.IM.Moved(win.Bounds().Center().Sub(cameraPosition))
+		// Translates screen space by the cam matrix.
+		win.SetMatrix(cam)
+
+		// CONTROLS
 		switch {
 		case win.Pressed(pixelgl.KeyRight):
 			playerAcc.X = 5.0
@@ -124,6 +129,10 @@ func run() {
 			frames = 0
 		default:
 		}
+		fmt.Printf("Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
+
+		// DRAW SPRITES
+		// Clear the screen and redraw the sprite
 		imd.Clear()
 		win.Clear(color.Black)
 		imd.Color = pixel.RGB(255, 255, 255)

@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	_ "image/png"
+	"math"
 	"os"
 	"time"
 
@@ -48,7 +49,7 @@ func run() {
 	// Window configuration
 	cfg := pixelgl.WindowConfig{
 		Title:  "Caleb's Game",
-		Bounds: pixel.R(0, 0, 1024, 720),
+		Bounds: pixel.R(0, 0, 1900, 700),
 		VSync:  true,
 	}
 
@@ -60,10 +61,11 @@ func run() {
 
 	// Declare vars
 	var (
-		last         = time.Now()
-		playerWidth  = 60.0
-		playerHeight = 60.0
-		playerRec    = pixel.R(-playerWidth/2, -playerHeight/2, playerWidth/2, playerHeight/2).Moved(win.Bounds().Center())
+		cameraPosition = pixel.ZV
+		last           = time.Now()
+		playerWidth    = 60.0
+		playerHeight   = 60.0
+		playerRec      = pixel.R(-playerWidth/2, -playerHeight/2, playerWidth/2, playerHeight/2).Moved(pixel.ZV)
 	)
 
 	// create IMDraw object
@@ -75,11 +77,14 @@ func run() {
 	// imd.Push(groundLine.p1, groundLine.p2)
 	// imd.Line(15)
 
-	rectangle := pixel.R(0, 0, 1024, 40)
+	rectangle := pixel.R(-800, -100, 800, -80) // ground rectangle
 
 	// MAIN LOOP ////////////////////////////////////
 	for !win.Closed() {
 		dt := time.Since(last).Seconds()
+		cameraPosition = pixel.Lerp(cameraPosition, playerRec.Center(), 1-math.Pow(1.0/128, dt))
+		cam := pixel.IM.Moved(win.Bounds().Center().Sub(cameraPosition))
+		win.SetMatrix(cam)
 		last = time.Now()
 		fmt.Printf("Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
 
@@ -94,9 +99,10 @@ func run() {
 			playerAcc.X = 0.0
 		}
 		if win.Pressed(pixelgl.KeyUp) && playerRec.Intersects(rectangle) {
-			playerVel.Y = 20
+			playerVel.Y = 15
 		}
 
+		// If touching ground
 		if !playerRec.Intersects(rectangle) {
 			playerAcc.Y = -1.5
 		} else if playerVel.Y <= 0 {

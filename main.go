@@ -17,38 +17,20 @@ import (
 // Definitions ///////////////////////////////////////////////////////
 
 var (
-	frames = 0
-	second = time.Tick(time.Second)
-	last   = time.Now()
+	frames               = 0
+	second               = time.Tick(time.Second)
+	last                 = time.Now()
+	pWidth, pHeight      = 60.0, 100.0 // Width and height of player character
+	playerStartingPos    = pixel.V(0, 500)
+	cameraPosition       = playerStartingPos
+	playerRec            = pixel.R(-pWidth/2, -pHeight/2, pWidth/2, pHeight/2).Moved(playerStartingPos) // Used to handle player physics
+	imd                  = imdraw.New(nil)                                                              // Used to draw shapes (player rectangle, platforms)
+	playerVel, playerAcc = pixel.ZV, pixel.ZV
+	touchingGround       = false
+	transition_speed     = 12.0
 )
 
-// Returns the slope of the line that is intersecting r
-func GetIntersectingLineSlope(l pixel.Line, r pixel.Rect) float64 {
-	points := r.IntersectionPoints(l)
-	if len(points) == 0 {
-		return -1
-	} else {
-		if len(points) == 2 {
-			return math.Abs((points[0].Y - points[1].Y) / (points[0].X - points[1].X))
-		}
-		return 0
-	}
-}
-
-// Returns a vec that moves r up so that it is no longer intersecting l
-func MoveRectangleUp(l pixel.Line, r pixel.Rect) pixel.Vec {
-	testRec := r
-	retVec := pixel.ZV
-	for len(testRec.IntersectionPoints(l)) > 0 {
-		retVec.Y++
-		testRec = testRec.Moved(retVec)
-		//fmt.Print(retVec)
-	}
-	retVec.Y-- // subtract one from the y component in order to keep sprite on the ground and keep it from bouncing.
-	return retVec
-}
-
-// Main Functions ///////////////////////////////////////////////////
+// Main Functions /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
 This is where all the game code runs, it is basically
@@ -76,20 +58,7 @@ func run() {
 		panic(err)
 	}
 
-	// Declare vars
-	var (
-		playerWidth, playerHeight = 60.0, 100.0
-		playerStartingPos         = pixel.V(0, 500)
-		cameraPosition            = playerStartingPos
-		playerRec                 = pixel.R(-playerWidth/2, -playerHeight/2, playerWidth/2, playerHeight/2).Moved(playerStartingPos)
-		imd                       = imdraw.New(nil) //Used to draw shapes (player rectangle, platforms)
-		playerVel, playerAcc      = pixel.ZV, pixel.ZV
-		touchingGround            = false
-		transition_speed          = 12.0
-	)
-
 	// Setup ground lines
-
 	type platform struct {
 		line pixel.Line
 	}
@@ -100,7 +69,7 @@ func run() {
 		{line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
 	}
 
-	// MAIN LOOP ////////////////////////////////////
+	// MAIN LOOP //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	for !win.Closed() {
 
 		// TIME
@@ -193,7 +162,7 @@ func main() {
 	pixelgl.Run(run)
 }
 
-// Helper Functions /////////////////////////////////////////////////
+// Helper Functions ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func loadPicture(path string) (pixel.Picture, error) {
 	file, err := os.Open(path)
@@ -206,4 +175,30 @@ func loadPicture(path string) (pixel.Picture, error) {
 		return nil, err
 	}
 	return pixel.PictureDataFromImage(img), nil
+}
+
+// Returns the slope of the line that is intersecting r
+func GetIntersectingLineSlope(l pixel.Line, r pixel.Rect) float64 {
+	points := r.IntersectionPoints(l)
+	if len(points) == 0 {
+		return -1
+	} else {
+		if len(points) == 2 {
+			return math.Abs((points[0].Y - points[1].Y) / (points[0].X - points[1].X))
+		}
+		return 0
+	}
+}
+
+// Returns a vec that moves r up so that it is no longer intersecting l
+func MoveRectangleUp(l pixel.Line, r pixel.Rect) pixel.Vec {
+	testRec := r
+	retVec := pixel.ZV
+	for len(testRec.IntersectionPoints(l)) > 0 {
+		retVec.Y++
+		testRec = testRec.Moved(retVec)
+		//fmt.Print(retVec)
+	}
+	retVec.Y-- // subtract one from the y component in order to keep sprite on the ground and keep it from bouncing.
+	return retVec
 }

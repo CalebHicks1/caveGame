@@ -30,7 +30,14 @@ var (
 	transition_speed     = 12.0
 	tile_size            = 1000
 	debug                = true
+	line_completed       = true
+	platforms            = make([]platform, 0)
 )
+
+// Setup ground lines
+type platform struct {
+	line pixel.Line
+}
 
 // Main Functions /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -39,6 +46,13 @@ This is where all the game code runs, it is basically
 the new main function since main is used by pixel.
 */
 func run() {
+
+	platforms = append(platforms,
+		platform{line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
+		platform{line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
+		platform{line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
+		platform{line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
+	)
 
 	// load the picture and create the player sprite
 	playerImg, err := loadPicture("assets/smile.png")
@@ -60,18 +74,6 @@ func run() {
 		panic(err)
 	}
 
-	// Setup ground lines
-	type platform struct {
-		line pixel.Line
-	}
-
-	platforms := []platform{
-		{line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
-		{line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
-		{line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
-		{line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
-	}
-
 	// Set up foreground tiles
 	// Want to have a list of sprites to draw, and a game location.
 
@@ -91,6 +93,8 @@ func run() {
 		x:      0,
 		y:      0,
 	}
+	cam := pixel.IM
+	point1 := cam.Unproject(win.MousePosition())
 
 	// tile2 := tile{
 	// 	sprite: pixel.NewSprite(tileImg, pixel.R(0, 0, float64(tile_size), float64(tile_size))),
@@ -109,12 +113,28 @@ func run() {
 		// Make camera follow the player
 		cameraPosition = pixel.Lerp(cameraPosition, playerRec.Center(), 1-math.Pow(1.0/128, dt))
 		// Create camera matrix to translate all sprites by
-		cam := pixel.IM.Moved(win.Bounds().Center().Sub(cameraPosition))
+		cam = pixel.IM.Moved(win.Bounds().Center().Sub(cameraPosition))
 		// Translates screen space by the cam matrix.
 		win.SetMatrix(cam)
 
 		// DEBUG
 		mouse_circle := pixel.C(cam.Unproject(win.MousePosition()), 10)
+		if win.JustPressed(pixelgl.KeyD) {
+			debug = !debug
+		}
+		if debug == true {
+			if win.JustPressed(pixelgl.MouseButtonLeft) {
+				if line_completed {
+					point1 = cam.Unproject(win.MousePosition())
+					line_completed = false
+				} else {
+					point2 := cam.Unproject(win.MousePosition())
+					fmt.Printf("\n%v, %v\n", point1, point2)
+					line_completed = true
+					CreateNewPlatform(point1, point2)
+				}
+			}
+		}
 
 		// CONTROLS
 		switch {
@@ -127,9 +147,6 @@ func run() {
 		}
 		if win.Pressed(pixelgl.KeyUp) && touchingGround {
 			playerVel.Y = 15
-		}
-		if win.JustPressed(pixelgl.KeyD) {
-			debug = !debug
 		}
 
 		// If touching ground
@@ -144,7 +161,7 @@ func run() {
 				playerAcc.Y = 0.0
 				playerVel.Y = 0.0
 				playerRec = playerRec.Moved(MoveRectangleUp(line, playerRec))
-				break
+				//break
 			}
 		}
 
@@ -247,4 +264,10 @@ func MoveRectangleUp(l pixel.Line, r pixel.Rect) pixel.Vec {
 	}
 	retVec.Y-- // subtract one from the y component in order to keep sprite on the ground and keep it from bouncing.
 	return retVec
+}
+
+// Creates a new platform and adds it to the platforms array.
+func CreateNewPlatform(p1 pixel.Vec, p2 pixel.Vec) {
+	new_line := pixel.L(p1, p2)
+	platforms = append(platforms, platform{line: new_line})
 }

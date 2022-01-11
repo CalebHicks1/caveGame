@@ -17,13 +17,9 @@ import (
 // Definitions ///////////////////////////////////////////////////////
 
 var (
-	frames           = 0
-	second           = time.Tick(time.Second)
-	playerPos        = pixel.ZV
-	playerVel        = pixel.ZV
-	playerAcc        = pixel.ZV
-	touchingGround   = false
-	transition_speed = 12.0
+	frames = 0
+	second = time.Tick(time.Second)
+	last   = time.Now()
 )
 
 // Returns the slope of the line that is intersecting r
@@ -82,21 +78,17 @@ func run() {
 
 	// Declare vars
 	var (
-		cameraPosition = pixel.ZV
-		last           = time.Now()
-		playerWidth    = 60.0
-		playerHeight   = 100.0
-		playerRec      = pixel.R(-playerWidth/2, -playerHeight/2, playerWidth/2, playerHeight/2).Moved(pixel.ZV)
+		playerWidth, playerHeight = 60.0, 100.0
+		playerStartingPos         = pixel.V(0, 500)
+		cameraPosition            = playerStartingPos
+		playerRec                 = pixel.R(-playerWidth/2, -playerHeight/2, playerWidth/2, playerHeight/2).Moved(playerStartingPos)
+		imd                       = imdraw.New(nil) //Used to draw shapes (player rectangle, platforms)
+		playerVel, playerAcc      = pixel.ZV, pixel.ZV
+		touchingGround            = false
+		transition_speed          = 12.0
 	)
 
-	// create IMDraw object
-	imd := imdraw.New(nil)
-
-	// // Create line
-	// groundLine := line{pixel.V(24, 360), pixel.V(1000, 360)}
-	// imd.EndShape = imdraw.RoundEndShape
-	// imd.Push(groundLine.p1, groundLine.p2)
-	// imd.Line(15)
+	// Setup ground lines
 
 	type platform struct {
 		line pixel.Line
@@ -105,6 +97,7 @@ func run() {
 		{line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
 		{line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
 		{line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
+		{line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
 	}
 
 	// MAIN LOOP ////////////////////////////////////
@@ -174,7 +167,7 @@ func run() {
 		imd.Color = pixel.RGB(255, 255, 255)
 		for _, p := range platforms {
 			line := p.line
-			imd.EndShape = imdraw.RoundEndShape
+			//imd.EndShape = imdraw.RoundEndShape
 			imd.Push(line.A, line.B)
 			imd.Line(5)
 		}

@@ -29,6 +29,7 @@ var (
 	touchingGround       = false
 	transition_speed     = 12.0
 	tile_size            = 1000
+	debug                = true
 )
 
 // Main Functions /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -112,6 +113,9 @@ func run() {
 		// Translates screen space by the cam matrix.
 		win.SetMatrix(cam)
 
+		// DEBUG
+		mouse_circle := pixel.C(cam.Unproject(win.MousePosition()), 10)
+
 		// CONTROLS
 		switch {
 		case win.Pressed(pixelgl.KeyRight):
@@ -123,6 +127,9 @@ func run() {
 		}
 		if win.Pressed(pixelgl.KeyUp) && touchingGround {
 			playerVel.Y = 15
+		}
+		if win.JustPressed(pixelgl.KeyD) {
+			debug = !debug
 		}
 
 		// If touching ground
@@ -165,16 +172,23 @@ func run() {
 		tile1.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)))
 		//tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)))
 
-		imd.Color = pixel.RGB(255, 0, 0)
-		for _, p := range platforms {
-			line := p.line
-			//imd.EndShape = imdraw.RoundEndShape
-			imd.Push(line.A, line.B)
-			imd.Line(5)
+		if debug == true {
+			imd.Color = pixel.RGB(255, 0, 0)
+			for _, p := range platforms {
+				line := p.line
+				//imd.EndShape = imdraw.RoundEndShape
+				imd.Push(line.A, line.B)
+				imd.Line(5)
+			}
+
+			imd.Color = pixel.RGB(255, 0, 0)
+			imd.Push(playerRec.Min, playerRec.Max)
+			imd.Rectangle(1)
+
+			imd.Push(mouse_circle.Center)
+			imd.Circle(mouse_circle.Radius, 1)
 		}
-		imd.Color = pixel.RGB(255, 0, 0)
-		imd.Push(playerRec.Min, playerRec.Max)
-		imd.Rectangle(1)
+
 		imd.Draw(win)
 		playerSprite.Draw(win, pixel.IM.ScaledXY(
 			pixel.ZV, pixel.V(playerRec.W()/16, playerRec.H()/16)).Moved(

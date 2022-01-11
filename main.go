@@ -28,6 +28,7 @@ var (
 	playerVel, playerAcc = pixel.ZV, pixel.ZV
 	touchingGround       = false
 	transition_speed     = 12.0
+	tile_size            = 1000
 )
 
 // Main Functions /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,12 +63,39 @@ func run() {
 	type platform struct {
 		line pixel.Line
 	}
+
 	platforms := []platform{
 		{line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
 		{line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
 		{line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
 		{line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
 	}
+
+	// Set up foreground tiles
+	// Want to have a list of sprites to draw, and a game location.
+
+	type tile struct {
+		sprite *pixel.Sprite
+		x      float64
+		y      float64
+	}
+
+	tileImg, err := loadPicture("assets/tile2.png")
+	if err != nil {
+		panic(err)
+	}
+
+	tile1 := tile{
+		sprite: pixel.NewSprite(tileImg, pixel.R(0, 0, 10000, 1000)),
+		x:      0,
+		y:      0,
+	}
+
+	// tile2 := tile{
+	// 	sprite: pixel.NewSprite(tileImg, pixel.R(0, 0, float64(tile_size), float64(tile_size))),
+	// 	x:      1,
+	// 	y:      0,
+	// }
 
 	// MAIN LOOP //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	for !win.Closed() {
@@ -108,7 +136,6 @@ func run() {
 				touchingGround = true
 				playerAcc.Y = 0.0
 				playerVel.Y = 0.0
-				//playerRec = playerRec.Moved(pixel.Lerp(playerRec.Center(), MoveRectangleUp(line, playerRec), 1-math.Pow(1.0/128, dt)))
 				playerRec = playerRec.Moved(MoveRectangleUp(line, playerRec))
 				break
 			}
@@ -133,7 +160,12 @@ func run() {
 		// Clear the screen and redraw the sprite
 		imd.Clear()
 		win.Clear(color.Black)
-		imd.Color = pixel.RGB(255, 255, 255)
+
+		// Draw tile
+		tile1.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)))
+		//tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)))
+
+		imd.Color = pixel.RGB(255, 0, 0)
 		for _, p := range platforms {
 			line := p.line
 			//imd.EndShape = imdraw.RoundEndShape

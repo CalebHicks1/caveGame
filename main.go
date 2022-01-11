@@ -26,7 +26,7 @@ var (
 	playerRec            = pixel.R(-pWidth/2, -pHeight/2, pWidth/2, pHeight/2).Moved(playerStartingPos) // Used to handle player physics
 	imd                  = imdraw.New(nil)                                                              // Used to draw shapes (player rectangle, platforms)
 	playerVel, playerAcc = pixel.ZV, pixel.ZV
-	touchingGround       = false
+	touching_ground      = false
 	transition_speed     = 12.0
 	tile_size            = 1000
 	debug                = true
@@ -105,6 +105,9 @@ func run() {
 	// MAIN LOOP //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	for !win.Closed() {
 
+		imd.Clear()
+		win.Clear(color.Black)
+
 		// TIME
 		dt := time.Since(last).Seconds()
 		last = time.Now()
@@ -118,7 +121,7 @@ func run() {
 		win.SetMatrix(cam)
 
 		// DEBUG
-		mouse_circle := pixel.C(cam.Unproject(win.MousePosition()), 10)
+		mouse_circle := pixel.C(cam.Unproject(win.MousePosition()), 15)
 		if win.JustPressed(pixelgl.KeyD) {
 			debug = !debug
 		}
@@ -126,14 +129,41 @@ func run() {
 			if win.JustPressed(pixelgl.MouseButtonLeft) {
 				if line_completed {
 					point1 = cam.Unproject(win.MousePosition())
+					for _, p := range platforms {
+
+						if mouse_circle.Contains(p.line.A) {
+							point1 = p.line.A
+							break
+						} else if mouse_circle.Contains(p.line.B) {
+							point1 = p.line.B
+							break
+						}
+					}
+
 					line_completed = false
 				} else {
 					point2 := cam.Unproject(win.MousePosition())
+					for _, p := range platforms {
+
+						if mouse_circle.Contains(p.line.A) {
+							point2 = p.line.A
+							break
+						} else if mouse_circle.Contains(p.line.B) {
+							point2 = p.line.B
+							break
+						}
+					}
 					fmt.Printf("\n%v, %v\n", point1, point2)
 					line_completed = true
 					CreateNewPlatform(point1, point2)
 				}
 			}
+		}
+		if !line_completed {
+
+			imd.Color = pixel.RGB(0, 255, 0)
+			imd.Push(point1, cam.Unproject(win.MousePosition()))
+			imd.Line(5)
 		}
 
 		// CONTROLS
@@ -145,25 +175,26 @@ func run() {
 		default:
 			playerAcc.X = 0.0
 		}
-		if win.Pressed(pixelgl.KeyUp) && touchingGround {
+		if win.Pressed(pixelgl.KeyUp) && touching_ground {
 			playerVel.Y = 15
 		}
 
 		// If touching ground
+		touching_any_platform := false
 		for _, p := range platforms {
 			line := p.line
 			//lineSlope = GetIntersectingLineSlope(line, playerRec)
 			if playerRec.IntersectLine(line) == pixel.ZV {
 				playerAcc.Y = -1.5
-				touchingGround = false
 			} else if playerVel.Y <= 0 {
-				touchingGround = true
+				touching_any_platform = true
 				playerAcc.Y = 0.0
 				playerVel.Y = 0.0
 				playerRec = playerRec.Moved(MoveRectangleUp(line, playerRec))
 				//break
 			}
 		}
+		touching_ground = touching_any_platform
 
 		// Apply velocity
 		playerVel.X = playerVel.X*(1-dt*transition_speed) + playerAcc.X*(dt*transition_speed)
@@ -181,9 +212,6 @@ func run() {
 		fmt.Printf(" Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
 
 		// DRAW SPRITES
-		// Clear the screen and redraw the sprite
-		imd.Clear()
-		win.Clear(color.Black)
 
 		// Draw tile
 		tile1.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)))

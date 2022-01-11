@@ -46,8 +46,9 @@ func MoveRectangleUp(l pixel.Line, r pixel.Rect) pixel.Vec {
 	for len(testRec.IntersectionPoints(l)) > 0 {
 		retVec.Y++
 		testRec = testRec.Moved(retVec)
-		fmt.Print(retVec)
+		//fmt.Print(retVec)
 	}
+	retVec.Y-- // subtract one from the y component in order to keep sprite on the ground and keep it from bouncing.
 	return retVec
 }
 
@@ -81,11 +82,10 @@ func run() {
 
 	// Declare vars
 	var (
-		lineSlope      = 0.0
 		cameraPosition = pixel.ZV
 		last           = time.Now()
 		playerWidth    = 60.0
-		playerHeight   = 60.0
+		playerHeight   = 100.0
 		playerRec      = pixel.R(-playerWidth/2, -playerHeight/2, playerWidth/2, playerHeight/2).Moved(pixel.ZV)
 	)
 
@@ -103,7 +103,8 @@ func run() {
 	}
 	platforms := []platform{
 		{line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
-		{line: pixel.L(pixel.V(450, -20), pixel.V(600, 20))},
+		{line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
+		{line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
 	}
 
 	// MAIN LOOP ////////////////////////////////////
@@ -137,7 +138,7 @@ func run() {
 		// If touching ground
 		for _, p := range platforms {
 			line := p.line
-			lineSlope = GetIntersectingLineSlope(line, playerRec)
+			//lineSlope = GetIntersectingLineSlope(line, playerRec)
 			if playerRec.IntersectLine(line) == pixel.ZV {
 				playerAcc.Y = -1.5
 				touchingGround = false
@@ -164,7 +165,7 @@ func run() {
 			frames = 0
 		default:
 		}
-		fmt.Printf("Player position: (%.2f, %.2f), line slope = %.2f, touching ground: %v \r", playerRec.Center().X, playerRec.Center().Y, lineSlope, touchingGround)
+		fmt.Printf(" Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
 
 		// DRAW SPRITES
 		// Clear the screen and redraw the sprite

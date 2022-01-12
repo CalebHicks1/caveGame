@@ -21,16 +21,16 @@ var (
 	second               = time.Tick(time.Second)
 	last                 = time.Now()
 	pWidth, pHeight      = 60.0, 100.0 // Width and height of player character
-	playerStartingPos    = pixel.V(0, 500)
-	cameraPosition       = playerStartingPos
-	playerRec            = pixel.R(-pWidth/2, -pHeight/2, pWidth/2, pHeight/2).Moved(playerStartingPos) // Used to handle player physics
-	imd                  = imdraw.New(nil)                                                              // Used to draw shapes (player rectangle, platforms)
+	player_starting_pos  = pixel.V(0, 1500)
+	camera_position      = player_starting_pos
+	camera_zoom          = 1.0
+	playerRec            = pixel.R(-pWidth/2, -pHeight/2, pWidth/2, pHeight/2).Moved(player_starting_pos) // Used to handle player physics
+	imd                  = imdraw.New(nil)                                                                // Used to draw shapes (player rectangle, platforms)
 	playerVel, playerAcc = pixel.ZV, pixel.ZV
 	touching_ground      = false
 	transition_speed     = 12.0
-	tile_size            = 1000
-	debug                = true
-	line_completed       = true
+	debug                = false // Press D to enter debug mode
+	line_completed       = true  // Used to track if a new platform is being drawn
 
 	platforms = ReadPlatformData("world_data/level1_platforms.yaml")
 )
@@ -48,15 +48,10 @@ the new main function since main is used by pixel.
 */
 func run() {
 
-	/*
-		hardcode platforms
-		platforms = append(platforms,
-			Platform{Line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
-			Platform{Line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
-			Platform{Line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
-			Platform{Line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
-		)
-	*/
+	//hardcode platforms
+	// platforms = append(platforms,
+	// 	Platform{Line: pixel.L(pixel.V(-400, 1400), pixel.V(400, 1400))},
+	// )
 
 	// load the picture and create the player sprite
 	playerImg, err := loadPicture("assets/smile.png")
@@ -88,24 +83,29 @@ func run() {
 		y      float64
 	}
 
-	tileImg, err := loadPicture("assets/tile2.png")
+	tileImg, err := loadPicture("assets/tile3.png")
 	if err != nil {
 		panic(err)
 	}
 
 	tile1 := tile{
-		sprite: pixel.NewSprite(tileImg, pixel.R(0, 0, 10000, 1000)),
+		sprite: pixel.NewSprite(tileImg, pixel.R(0, 0, 1000, 1000)),
 		x:      0,
 		y:      0,
 	}
 	cam := pixel.IM
 	point1 := cam.Unproject(win.MousePosition())
 
-	// tile2 := tile{
-	// 	sprite: pixel.NewSprite(tileImg, pixel.R(0, 0, float64(tile_size), float64(tile_size))),
-	// 	x:      1,
-	// 	y:      0,
-	// }
+	tileImg2, err := loadPicture("assets/tile4.png")
+	if err != nil {
+		panic(err)
+	}
+
+	tile2 := tile{
+		sprite: pixel.NewSprite(tileImg2, pixel.R(0, 0, 1000, 1000)),
+		x:      1,
+		y:      0,
+	}
 
 	// MAIN LOOP //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	for !win.Closed() {
@@ -119,9 +119,10 @@ func run() {
 
 		// CAMERA
 		// Make camera follow the player
-		cameraPosition = pixel.Lerp(cameraPosition, playerRec.Center(), 1-math.Pow(1.0/128, dt))
+		camera_position = pixel.Lerp(camera_position, playerRec.Center(), 1-math.Pow(1.0/128, dt))
+		camera_zoom *= math.Pow(1.1, win.MouseScroll().Y)
 		// Create camera matrix to translate all sprites by
-		cam = pixel.IM.Moved(win.Bounds().Center().Sub(cameraPosition))
+		cam = pixel.IM.Scaled(camera_position, camera_zoom).Moved(win.Bounds().Center().Sub(camera_position))
 		// Translates screen space by the cam matrix.
 		win.SetMatrix(cam)
 
@@ -220,14 +221,14 @@ func run() {
 		// DRAW SPRITES
 
 		// Draw tile
-		tile1.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)))
-		//tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)))
+		tile1.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)).Scaled(pixel.ZV, 4))
+		tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)).Scaled(pixel.ZV, 4))
 
 		if debug == true {
 			imd.Color = pixel.RGB(255, 0, 0)
 			for _, p := range platforms {
 				line := p.Line
-				//imd.EndShape = imdraw.RoundEndShape
+				imd.EndShape = imdraw.RoundEndShape
 				imd.Push(line.A, line.B)
 				imd.Line(5)
 			}
@@ -305,5 +306,5 @@ func CreateNewPlatform(p1 pixel.Vec, p2 pixel.Vec) {
 	new_line := pixel.L(p1, p2)
 	new_platform := Platform{Line: new_line}
 	platforms = append(platforms, new_platform)
-	AddPlatformData(new_platform, "world_data/level1_platforms.yaml")
+	WritePlatformData(new_platform, "world_data/level1_platforms.yaml")
 }

@@ -1,5 +1,7 @@
 package main
 
+// Handles writing and reading world data
+
 import (
 	"fmt"
 	"io/ioutil"
@@ -13,7 +15,7 @@ import (
 var num_platforms = 0
 
 // Writes the given platform to the file at path
-func AddPlatformData(p Platform, path string) {
+func WritePlatformData(p Platform, path string) {
 	platform_name, err := uuid.NewV4()
 	platform := map[string]Platform{platform_name.String(): p}
 	data, err1 := yaml.Marshal(&platform)

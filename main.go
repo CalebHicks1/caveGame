@@ -31,12 +31,13 @@ var (
 	tile_size            = 1000
 	debug                = true
 	line_completed       = true
-	platforms            = make([]platform, 0)
+
+	platforms = ReadPlatformData("world_data/level1_platforms.yaml")
 )
 
 // Setup ground lines
-type platform struct {
-	line pixel.Line
+type Platform struct {
+	Line pixel.Line
 }
 
 // Main Functions /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -47,12 +48,15 @@ the new main function since main is used by pixel.
 */
 func run() {
 
-	platforms = append(platforms,
-		platform{line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
-		platform{line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
-		platform{line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
-		platform{line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
-	)
+	/*
+		hardcode platforms
+		platforms = append(platforms,
+			Platform{Line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
+			Platform{Line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
+			Platform{Line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
+			Platform{Line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
+		)
+	*/
 
 	// load the picture and create the player sprite
 	playerImg, err := loadPicture("assets/smile.png")
@@ -63,9 +67,10 @@ func run() {
 
 	// Window configuration
 	cfg := pixelgl.WindowConfig{
-		Title:  "Caleb's Game",
-		Bounds: pixel.R(0, 0, 900, 700),
-		VSync:  true,
+		Title:     "Caleb's Game",
+		Bounds:    pixel.R(0, 0, 900, 700),
+		VSync:     true,
+		Resizable: true,
 	}
 
 	// Create game window
@@ -125,17 +130,19 @@ func run() {
 		if win.JustPressed(pixelgl.KeyD) {
 			debug = !debug
 		}
+
+		// draw new lines
 		if debug == true {
 			if win.JustPressed(pixelgl.MouseButtonLeft) {
 				if line_completed {
 					point1 = cam.Unproject(win.MousePosition())
 					for _, p := range platforms {
 
-						if mouse_circle.Contains(p.line.A) {
-							point1 = p.line.A
+						if mouse_circle.Contains(p.Line.A) {
+							point1 = p.Line.A
 							break
-						} else if mouse_circle.Contains(p.line.B) {
-							point1 = p.line.B
+						} else if mouse_circle.Contains(p.Line.B) {
+							point1 = p.Line.B
 							break
 						}
 					}
@@ -145,15 +152,14 @@ func run() {
 					point2 := cam.Unproject(win.MousePosition())
 					for _, p := range platforms {
 
-						if mouse_circle.Contains(p.line.A) {
-							point2 = p.line.A
+						if mouse_circle.Contains(p.Line.A) {
+							point2 = p.Line.A
 							break
-						} else if mouse_circle.Contains(p.line.B) {
-							point2 = p.line.B
+						} else if mouse_circle.Contains(p.Line.B) {
+							point2 = p.Line.B
 							break
 						}
 					}
-					fmt.Printf("\n%v, %v\n", point1, point2)
 					line_completed = true
 					CreateNewPlatform(point1, point2)
 				}
@@ -182,7 +188,7 @@ func run() {
 		// If touching ground
 		touching_any_platform := false
 		for _, p := range platforms {
-			line := p.line
+			line := p.Line
 			//lineSlope = GetIntersectingLineSlope(line, playerRec)
 			if playerRec.IntersectLine(line) == pixel.ZV {
 				playerAcc.Y = -1.5
@@ -220,7 +226,7 @@ func run() {
 		if debug == true {
 			imd.Color = pixel.RGB(255, 0, 0)
 			for _, p := range platforms {
-				line := p.line
+				line := p.Line
 				//imd.EndShape = imdraw.RoundEndShape
 				imd.Push(line.A, line.B)
 				imd.Line(5)
@@ -297,5 +303,7 @@ func MoveRectangleUp(l pixel.Line, r pixel.Rect) pixel.Vec {
 // Creates a new platform and adds it to the platforms array.
 func CreateNewPlatform(p1 pixel.Vec, p2 pixel.Vec) {
 	new_line := pixel.L(p1, p2)
-	platforms = append(platforms, platform{line: new_line})
+	new_platform := Platform{Line: new_line}
+	platforms = append(platforms, new_platform)
+	AddPlatformData(new_platform, "world_data/level1_platforms.yaml")
 }

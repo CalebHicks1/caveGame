@@ -26,10 +26,19 @@ var (
 	playerRec            = pixel.R(-pWidth/2, -pHeight/2, pWidth/2, pHeight/2).Moved(playerStartingPos) // Used to handle player physics
 	imd                  = imdraw.New(nil)                                                              // Used to draw shapes (player rectangle, platforms)
 	playerVel, playerAcc = pixel.ZV, pixel.ZV
-	touchingGround       = false
+	touching_ground      = false
 	transition_speed     = 12.0
 	tile_size            = 1000
+	debug                = true
+	line_completed       = true
+
+	platforms = ReadPlatformData("world_data/level1_platforms.yaml")
 )
+
+// Setup ground lines
+type Platform struct {
+	Line pixel.Line
+}
 
 // Main Functions /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -38,6 +47,16 @@ This is where all the game code runs, it is basically
 the new main function since main is used by pixel.
 */
 func run() {
+
+	/*
+		hardcode platforms
+		platforms = append(platforms,
+			Platform{Line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
+			Platform{Line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
+			Platform{Line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
+			Platform{Line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
+		)
+	*/
 
 	// load the picture and create the player sprite
 	playerImg, err := loadPicture("assets/smile.png")
@@ -48,27 +67,16 @@ func run() {
 
 	// Window configuration
 	cfg := pixelgl.WindowConfig{
-		Title:  "Caleb's Game",
-		Bounds: pixel.R(0, 0, 900, 700),
-		VSync:  true,
+		Title:     "Caleb's Game",
+		Bounds:    pixel.R(0, 0, 900, 700),
+		VSync:     true,
+		Resizable: true,
 	}
 
 	// Create game window
 	win, err := pixelgl.NewWindow(cfg)
 	if err != nil {
 		panic(err)
-	}
-
-	// Setup ground lines
-	type platform struct {
-		line pixel.Line
-	}
-
-	platforms := []platform{
-		{line: pixel.L(pixel.V(-400, -70), pixel.V(400, -50))},
-		{line: pixel.L(pixel.V(450, -20), pixel.V(900, 100))},
-		{line: pixel.L(pixel.V(900, 100), pixel.V(1500, 100))},
-		{line: pixel.L(pixel.V(1500, 100), pixel.V(2000, 80))},
 	}
 
 	// Set up foreground tiles
@@ -90,6 +98,8 @@ func run() {
 		x:      0,
 		y:      0,
 	}
+	cam := pixel.IM
+	point1 := cam.Unproject(win.MousePosition())
 
 	// tile2 := tile{
 	// 	sprite: pixel.NewSprite(tileImg, pixel.R(0, 0, float64(tile_size), float64(tile_size))),
@@ -100,6 +110,9 @@ func run() {
 	// MAIN LOOP //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	for !win.Closed() {
 
+		imd.Clear()
+		win.Clear(color.Black)
+
 		// TIME
 		dt := time.Since(last).Seconds()
 		last = time.Now()
@@ -108,9 +121,56 @@ func run() {
 		// Make camera follow the player
 		cameraPosition = pixel.Lerp(cameraPosition, playerRec.Center(), 1-math.Pow(1.0/128, dt))
 		// Create camera matrix to translate all sprites by
-		cam := pixel.IM.Moved(win.Bounds().Center().Sub(cameraPosition))
+		cam = pixel.IM.Moved(win.Bounds().Center().Sub(cameraPosition))
 		// Translates screen space by the cam matrix.
 		win.SetMatrix(cam)
+
+		// DEBUG
+		mouse_circle := pixel.C(cam.Unproject(win.MousePosition()), 15)
+		if win.JustPressed(pixelgl.KeyD) {
+			debug = !debug
+		}
+
+		// draw new lines
+		if debug == true {
+			if win.JustPressed(pixelgl.MouseButtonLeft) {
+				if line_completed {
+					point1 = cam.Unproject(win.MousePosition())
+					for _, p := range platforms {
+
+						if mouse_circle.Contains(p.Line.A) {
+							point1 = p.Line.A
+							break
+						} else if mouse_circle.Contains(p.Line.B) {
+							point1 = p.Line.B
+							break
+						}
+					}
+
+					line_completed = false
+				} else {
+					point2 := cam.Unproject(win.MousePosition())
+					for _, p := range platforms {
+
+						if mouse_circle.Contains(p.Line.A) {
+							point2 = p.Line.A
+							break
+						} else if mouse_circle.Contains(p.Line.B) {
+							point2 = p.Line.B
+							break
+						}
+					}
+					line_completed = true
+					CreateNewPlatform(point1, point2)
+				}
+			}
+		}
+		if !line_completed {
+
+			imd.Color = pixel.RGB(0, 255, 0)
+			imd.Push(point1, cam.Unproject(win.MousePosition()))
+			imd.Line(5)
+		}
 
 		// CONTROLS
 		switch {
@@ -121,25 +181,26 @@ func run() {
 		default:
 			playerAcc.X = 0.0
 		}
-		if win.Pressed(pixelgl.KeyUp) && touchingGround {
+		if win.Pressed(pixelgl.KeyUp) && touching_ground {
 			playerVel.Y = 15
 		}
 
 		// If touching ground
+		touching_any_platform := false
 		for _, p := range platforms {
-			line := p.line
+			line := p.Line
 			//lineSlope = GetIntersectingLineSlope(line, playerRec)
 			if playerRec.IntersectLine(line) == pixel.ZV {
 				playerAcc.Y = -1.5
-				touchingGround = false
 			} else if playerVel.Y <= 0 {
-				touchingGround = true
+				touching_any_platform = true
 				playerAcc.Y = 0.0
 				playerVel.Y = 0.0
 				playerRec = playerRec.Moved(MoveRectangleUp(line, playerRec))
-				break
+				//break
 			}
 		}
+		touching_ground = touching_any_platform
 
 		// Apply velocity
 		playerVel.X = playerVel.X*(1-dt*transition_speed) + playerAcc.X*(dt*transition_speed)
@@ -157,24 +218,28 @@ func run() {
 		fmt.Printf(" Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
 
 		// DRAW SPRITES
-		// Clear the screen and redraw the sprite
-		imd.Clear()
-		win.Clear(color.Black)
 
 		// Draw tile
 		tile1.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)))
 		//tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)))
 
-		imd.Color = pixel.RGB(255, 0, 0)
-		for _, p := range platforms {
-			line := p.line
-			//imd.EndShape = imdraw.RoundEndShape
-			imd.Push(line.A, line.B)
-			imd.Line(5)
+		if debug == true {
+			imd.Color = pixel.RGB(255, 0, 0)
+			for _, p := range platforms {
+				line := p.Line
+				//imd.EndShape = imdraw.RoundEndShape
+				imd.Push(line.A, line.B)
+				imd.Line(5)
+			}
+
+			imd.Color = pixel.RGB(255, 0, 0)
+			imd.Push(playerRec.Min, playerRec.Max)
+			imd.Rectangle(1)
+
+			imd.Push(mouse_circle.Center)
+			imd.Circle(mouse_circle.Radius, 1)
 		}
-		imd.Color = pixel.RGB(255, 0, 0)
-		imd.Push(playerRec.Min, playerRec.Max)
-		imd.Rectangle(1)
+
 		imd.Draw(win)
 		playerSprite.Draw(win, pixel.IM.ScaledXY(
 			pixel.ZV, pixel.V(playerRec.W()/16, playerRec.H()/16)).Moved(
@@ -233,4 +298,12 @@ func MoveRectangleUp(l pixel.Line, r pixel.Rect) pixel.Vec {
 	}
 	retVec.Y-- // subtract one from the y component in order to keep sprite on the ground and keep it from bouncing.
 	return retVec
+}
+
+// Creates a new platform and adds it to the platforms array.
+func CreateNewPlatform(p1 pixel.Vec, p2 pixel.Vec) {
+	new_line := pixel.L(p1, p2)
+	new_platform := Platform{Line: new_line}
+	platforms = append(platforms, new_platform)
+	AddPlatformData(new_platform, "world_data/level1_platforms.yaml")
 }

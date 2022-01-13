@@ -3,7 +3,6 @@ package main
 // Handles writing and reading world data
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -45,7 +44,6 @@ func ReadPlatformData(path string) []Platform {
 	if err1 != nil {
 		log.Fatal(err1)
 	}
-	fmt.Printf("\n%v\n", result_data)
 	var result []Platform
 	for _, value := range result_data {
 		result = append(result, value)

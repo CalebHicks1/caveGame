@@ -31,8 +31,7 @@ var (
 	transition_speed     = 12.0
 	debug                = false // Press D to enter debug mode
 	line_completed       = true  // Used to track if a new platform is being drawn
-
-	platforms = ReadPlatformData("world_data/level1_platforms.yaml")
+	platforms            = ReadPlatformData("world_data/level1_platforms.yaml")
 )
 
 // Setup ground lines
@@ -49,9 +48,9 @@ the new main function since main is used by pixel.
 func run() {
 
 	//hardcode platforms
-	// platforms = append(platforms,
-	// 	Platform{Line: pixel.L(pixel.V(-400, 1400), pixel.V(400, 1400))},
-	// )
+	platforms = append(platforms,
+		Platform{Line: pixel.L(pixel.V(-400, 1400), pixel.V(400, 1400))},
+	)
 
 	// load the picture and create the player sprite
 	playerImg, err := loadPicture("assets/smile.png")
@@ -59,6 +58,12 @@ func run() {
 		panic(err)
 	}
 	playerSprite := pixel.NewSprite(playerImg, playerImg.Bounds())
+
+	lightImg, lightErr := loadPicture("assets/light.png")
+	if lightErr != nil {
+		panic(lightErr)
+	}
+	lightSprite := pixel.NewSprite(lightImg, lightImg.Bounds())
 
 	// Window configuration
 	cfg := pixelgl.WindowConfig{
@@ -107,15 +112,19 @@ func run() {
 		y:      0,
 	}
 
+	//lightMap := lightSprite.Picture()
+	//win.Canvas().SetUniform("uLightMap", &lightMap)
+	lightMapCanvas := pixelgl.NewCanvas(win.Bounds())
+	win.Canvas().SetFragmentShader(fragmentShader)
+
 	// MAIN LOOP //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	for !win.Closed() {
-
-		imd.Clear()
-		win.Clear(color.Black)
-
 		// TIME
 		dt := time.Since(last).Seconds()
 		last = time.Now()
+
+		imd.Clear()
+		win.Clear(color.Black)
 
 		// CAMERA
 		// Make camera follow the player
@@ -205,7 +214,7 @@ func run() {
 
 		// Apply velocity
 		playerVel.X = playerVel.X*(1-dt*transition_speed) + playerAcc.X*(dt*transition_speed)
-		playerVel.Y += playerAcc.Y
+		playerVel.Y += playerAcc.Y * (1 - dt)
 		playerRec = playerRec.Moved(playerVel)
 
 		// Draw fps on window title
@@ -218,12 +227,23 @@ func run() {
 		}
 		fmt.Printf(" Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
 
-		// DRAW SPRITES
-
+		win.SetComposeMethod(pixel.ComposePlus)
 		// Draw tile
+		lightSprite.Draw(win.Canvas(), pixel.IM.Moved(cam.Unproject(win.MousePosition())))
+
 		tile1.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)).Scaled(pixel.ZV, 4))
 		tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)).Scaled(pixel.ZV, 4))
 
+		// DRAW SPRITES
+		playerSprite.Draw(win, pixel.IM.ScaledXY(
+			pixel.ZV, pixel.V(playerRec.W()/16, playerRec.H()/16)).Moved(
+			playerRec.Center()))
+
+		lightMapCanvas.Clear(pixel.RGB(0, 0, 1))
+		//lightMapCanvas.Draw(win.Canvas(), pixel.IM.Moved(cam.Unproject(win.Bounds().Center())))
+		//win.Canvas().SetComposeMethod(pixel.ComposeAtop)
+		//win.Canvas().SetUniform("lightMap", lightMapCanvas.Pixels())
+		win.SetComposeMethod(pixel.ComposeAtop)
 		if debug == true {
 			imd.Color = pixel.RGB(255, 0, 0)
 			for _, p := range platforms {
@@ -240,12 +260,7 @@ func run() {
 			imd.Push(mouse_circle.Center)
 			imd.Circle(mouse_circle.Radius, 1)
 		}
-
 		imd.Draw(win)
-		playerSprite.Draw(win, pixel.IM.ScaledXY(
-			pixel.ZV, pixel.V(playerRec.W()/16, playerRec.H()/16)).Moved(
-			playerRec.Center()))
-
 		win.Update()
 
 	}

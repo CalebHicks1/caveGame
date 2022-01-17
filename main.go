@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	_ "image/png"
 	"math"
 	"os"
@@ -58,8 +57,7 @@ func run() {
 		panic(err)
 	}
 	playerSprite := pixel.NewSprite(playerImg, playerImg.Bounds())
-
-	lightImg, lightErr := loadPicture("assets/light.png")
+	lightImg, lightErr := loadPicture("assets/light2.png")
 	if lightErr != nil {
 		panic(lightErr)
 	}
@@ -114,8 +112,7 @@ func run() {
 
 	//lightMap := lightSprite.Picture()
 	//win.Canvas().SetUniform("uLightMap", &lightMap)
-	lightMapCanvas := pixelgl.NewCanvas(win.Bounds())
-	win.Canvas().SetFragmentShader(fragmentShader)
+	//win.Canvas().SetFragmentShader(fragmentShader)
 
 	// MAIN LOOP //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	for !win.Closed() {
@@ -124,7 +121,8 @@ func run() {
 		last = time.Now()
 
 		imd.Clear()
-		win.Clear(color.Black)
+		win.Clear(pixel.Alpha(0))
+		win.Canvas().Clear(pixel.Alpha(0))
 
 		// CAMERA
 		// Make camera follow the player
@@ -142,7 +140,7 @@ func run() {
 		}
 
 		// draw new lines
-		if debug == true {
+		if debug {
 			if win.JustPressed(pixelgl.MouseButtonLeft) {
 				if line_completed {
 					point1 = cam.Unproject(win.MousePosition())
@@ -228,23 +226,22 @@ func run() {
 		fmt.Printf(" Player position: (%.2f, %.2f)\r", playerRec.Center().X, playerRec.Center().Y)
 
 		win.SetComposeMethod(pixel.ComposePlus)
+		win.SetColorMask(pixel.Alpha(1))
 		// Draw tile
 		lightSprite.Draw(win.Canvas(), pixel.IM.Moved(cam.Unproject(win.MousePosition())))
 
-		tile1.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)).Scaled(pixel.ZV, 4))
+		win.SetComposeMethod(pixel.ComposeIn)
+		tile1.sprite.Draw(win.Canvas(), pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)).Scaled(pixel.ZV, 4))
 		tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)).Scaled(pixel.ZV, 4))
 
 		// DRAW SPRITES
+		win.SetComposeMethod(pixel.ComposeAtop)
 		playerSprite.Draw(win, pixel.IM.ScaledXY(
 			pixel.ZV, pixel.V(playerRec.W()/16, playerRec.H()/16)).Moved(
 			playerRec.Center()))
 
-		lightMapCanvas.Clear(pixel.RGB(0, 0, 1))
-		//lightMapCanvas.Draw(win.Canvas(), pixel.IM.Moved(cam.Unproject(win.Bounds().Center())))
-		//win.Canvas().SetComposeMethod(pixel.ComposeAtop)
-		//win.Canvas().SetUniform("lightMap", lightMapCanvas.Pixels())
 		win.SetComposeMethod(pixel.ComposeAtop)
-		if debug == true {
+		if debug {
 			imd.Color = pixel.RGB(255, 0, 0)
 			for _, p := range platforms {
 				line := p.Line

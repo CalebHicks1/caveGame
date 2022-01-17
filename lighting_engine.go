@@ -20,18 +20,19 @@ uniform sampler2D lightMap;
 void main() {
 	// Get our current screen coordinate
 	vec2 t = (vTexCoords - uTexBounds.xy) / uTexBounds.zw;
-	if(texture(uTexture, t).a	< 0.1) {
+	if(texture(uTexture, t).a	< 0.001) {
 		discard;
 	}
-
-	//Sum our 3 color channels
-	float sum  = texture(uTexture, t).r;
-	      sum += texture(uTexture, t).g;
-	      sum += texture(uTexture, t).b;
-
-	//Divide by 3, and set the output to the result
-	vec4 color = texture(uTexture, t);
 	
-	fragColor = color;
+	fragColor = texture(uTexture, t);
 }
 `
+
+/*
+TODO:
+1. set up canvas to draw light map to
+2. draw shapes to canvas
+3. combine with scene
+4. find way to ambiently draw rest of background
+
+*/

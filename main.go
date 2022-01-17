@@ -110,9 +110,8 @@ func run() {
 		y:      0,
 	}
 
-	//lightMap := lightSprite.Picture()
-	//win.Canvas().SetUniform("uLightMap", &lightMap)
-	//win.Canvas().SetFragmentShader(fragmentShader)
+	//Removes transparent parts of sprites.
+	win.Canvas().SetFragmentShader(fragmentShader)
 
 	// MAIN LOOP //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	for !win.Closed() {
@@ -121,8 +120,7 @@ func run() {
 		last = time.Now()
 
 		imd.Clear()
-		win.Clear(pixel.Alpha(0))
-		win.Canvas().Clear(pixel.Alpha(0))
+		win.Canvas().Clear(pixel.Alpha(0.1))
 
 		// CAMERA
 		// Make camera follow the player
@@ -229,18 +227,20 @@ func run() {
 		win.SetColorMask(pixel.Alpha(1))
 		// Draw tile
 		lightSprite.Draw(win.Canvas(), pixel.IM.Moved(cam.Unproject(win.MousePosition())))
-
+		win.SetColorMask(pixel.RGBA{200, 100, 50, 1})
 		win.SetComposeMethod(pixel.ComposeIn)
+		//win.SetColorMask(color.RGBA{255, 255, 100, 1})
 		tile1.sprite.Draw(win.Canvas(), pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)).Scaled(pixel.ZV, 4))
 		tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)).Scaled(pixel.ZV, 4))
 
 		// DRAW SPRITES
-		win.SetComposeMethod(pixel.ComposeAtop)
+		//win.SetComposeMethod(pixel.ComposePlus)
+		win.SetColorMask(pixel.Alpha(1))
 		playerSprite.Draw(win, pixel.IM.ScaledXY(
 			pixel.ZV, pixel.V(playerRec.W()/16, playerRec.H()/16)).Moved(
 			playerRec.Center()))
 
-		win.SetComposeMethod(pixel.ComposeAtop)
+		win.SetComposeMethod(pixel.ComposeOver)
 		if debug {
 			imd.Color = pixel.RGB(255, 0, 0)
 			for _, p := range platforms {

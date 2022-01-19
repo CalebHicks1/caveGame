@@ -11,8 +11,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var num_platforms = 0
-
 // Writes the given platform to the file at path
 func WritePlatformData(p Platform, path string) {
 	platform_name, err := uuid.NewV4()

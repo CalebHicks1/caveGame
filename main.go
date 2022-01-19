@@ -77,6 +77,7 @@ func run() {
 		panic(err)
 	}
 
+	lightCanvas := pixelgl.NewCanvas(win.Bounds())
 	// Set up foreground tiles
 	// Want to have a list of sprites to draw, and a game location.
 
@@ -99,19 +100,19 @@ func run() {
 	cam := pixel.IM
 	point1 := cam.Unproject(win.MousePosition())
 
-	tileImg2, err := loadPicture("assets/tile4.png")
-	if err != nil {
-		panic(err)
-	}
+	// tileImg2, err := loadPicture("assets/tile4.png")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	tile2 := tile{
-		sprite: pixel.NewSprite(tileImg2, pixel.R(0, 0, 1000, 1000)),
-		x:      1,
-		y:      0,
-	}
+	// tile2 := tile{
+	// 	sprite: pixel.NewSprite(tileImg2, pixel.R(0, 0, 1000, 1000)),
+	// 	x:      1,
+	// 	y:      0,
+	// }
 
 	//Removes transparent parts of sprites.
-	win.Canvas().SetFragmentShader(fragmentShader)
+	//win.Canvas().SetFragmentShader(fragmentShader)
 
 	// MAIN LOOP //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	for !win.Closed() {
@@ -120,7 +121,7 @@ func run() {
 		last = time.Now()
 
 		imd.Clear()
-		win.Canvas().Clear(pixel.Alpha(0.1))
+		win.Canvas().Clear(pixel.Alpha(0))
 
 		// CAMERA
 		// Make camera follow the player
@@ -226,12 +227,16 @@ func run() {
 		win.SetComposeMethod(pixel.ComposePlus)
 		win.SetColorMask(pixel.Alpha(1))
 		// Draw tile
-		lightSprite.Draw(win.Canvas(), pixel.IM.Moved(cam.Unproject(win.MousePosition())))
-		win.SetColorMask(pixel.RGBA{200, 100, 50, 1})
+		lightCanvas.SetBounds(win.Bounds().Moved(win.Bounds().Max).Moved(camera_position))
+		GenerateLightMap(*lightCanvas, *imd, *lightSprite)
+		lightCanvas.Draw(win, pixel.IM.Moved(cam.Unproject(win.Bounds().Center())))
 		win.SetComposeMethod(pixel.ComposeIn)
+		win.SetColorMask(pixel.RGBA{200, 100, 50, 1})
+
 		//win.SetColorMask(color.RGBA{255, 255, 100, 1})
 		tile1.sprite.Draw(win.Canvas(), pixel.IM.Moved(pixel.V(tile1.x*1000, tile1.y*1000)).Scaled(pixel.ZV, 4))
-		tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)).Scaled(pixel.ZV, 4))
+		//tile2.sprite.Draw(win, pixel.IM.Moved(pixel.V(tile2.x*1000, tile2.y*1000)).Scaled(pixel.ZV, 4))
+		//win.SetComposeMethod(pixel.ComposeOver)
 
 		// DRAW SPRITES
 		//win.SetComposeMethod(pixel.ComposePlus)

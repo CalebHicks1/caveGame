@@ -121,7 +121,7 @@ func run() {
 		last = time.Now()
 
 		imd.Clear()
-		win.Canvas().Clear(pixel.Alpha(0))
+		win.Canvas().Clear(pixel.Alpha(0.1))
 
 		// CAMERA
 		// Make camera follow the player
@@ -227,7 +227,7 @@ func run() {
 		win.SetComposeMethod(pixel.ComposePlus)
 		win.SetColorMask(pixel.Alpha(1))
 		// Draw tile
-		lightCanvas.SetBounds(win.Bounds().Moved(win.Bounds().Max).Moved(camera_position))
+		//lightCanvas.SetBounds(win.Bounds().Moved(win.Bounds().Max).Moved(camera_position))
 		GenerateLightMap(*lightCanvas, *imd, *lightSprite)
 		lightCanvas.Draw(win, pixel.IM.Moved(cam.Unproject(win.Bounds().Center())))
 		win.SetComposeMethod(pixel.ComposeIn)

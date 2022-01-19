@@ -47,12 +47,12 @@ TODO:
 func GenerateLightMap(canvas pixelgl.Canvas, imd imdraw.IMDraw, lightSprite pixel.Sprite) {
 	//rec := pixel.R(-100, -100, 100, 100)
 	imd.Color = pixel.RGB(255, 0, 0)
-	imd.Push(canvas.Bounds().Center(), canvas.Bounds().Center().ScaledXY(pixel.V(40, 40)))
+	imd.Push(canvas.Bounds().Center(), canvas.Bounds().Center().ScaledXY(pixel.V(2, 2)))
 	imd.Rectangle(0)
 	imd.Push(canvas.Bounds().Min, canvas.Bounds().Center())
 	imd.Rectangle(0)
 	canvas.SetComposeMethod(pixel.ComposePlus)
 	imd.Draw(&canvas)
 	canvas.SetComposeMethod(pixel.ComposeOut)
-	lightSprite.Draw(&canvas, pixel.IM.Moved(canvas.Bounds().Center()).Scaled(canvas.Bounds().Center(), 2))
+	lightSprite.Draw(&canvas, pixel.IM.Moved(canvas.Bounds().Center()).Scaled(canvas.Bounds().Center(), 1.2))
 }
